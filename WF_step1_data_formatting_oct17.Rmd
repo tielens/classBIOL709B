@@ -23,7 +23,9 @@ rm(list=ls())
 #install.packages('devtools')
 library(devtools)
 library(bindrcpp)
+library(plyr)
 library(dplyr)
+library(reshape2)
 library(tibble)
 library(pkgconfig)
 library(glue)
@@ -45,23 +47,26 @@ specimens<-subset(data.specimens, subset=Year=="2010")
 down <- melt(specimens,measure.vars="Abund")
 make <- dcast(down,formula= Kipuka_ID+Plot~Family+SpeciesCode, fun.aggregate=sum)
 
-library(reshape2)
-library(plyr)
-inv_comm<-make[,-c(1,2)]
-inv_plot_attr <- ddply(down, .( Plot, Centroid_X,Centroid_Y),summarize, Area_ha=mean(Area_ha))
-inv_plot_attr<-inv_plot_attr[,c(1:3)]
+my_comm<-make[,-c(1,2)]
+my_plot_attr <- ddply(down, .( Plot, Centroid_X,Centroid_Y),summarize, Area_ha=mean(Area_ha))
+my_plot_attr<-my_plot_attr[,c(1:3)]
 
 # spatial coordinates must be named x y to guarantee that they will be recognized as coordinates by the function.
-colnames(inv_plot_attr)<-c("Plot", "x", "y")
+colnames(my_plot_attr)<-c("Plot", "x", "y")
 
-head(inv_comm)
-head(inv_plot_attr)
+head(my_comm)
+head(my_plot_attr)
+
+#write.table(my_comm, "kipuka_comm_mobr.csv", row.names=TRUE, sep= "," )
+#write.table(my_plot_attr, "kipuka_attr_mobr.csv", row.names=TRUE, sep= "," )
 ```
 
 
 
+
 ```{r}
-mobr_object <- make_mob_in(inv_comm, inv_plot_attr, latlong=TRUE)
+
+mobr_object <- make_mob_in(my_comm, my_plot_attr, latlong=TRUE)
 
 mobr_object
 ```

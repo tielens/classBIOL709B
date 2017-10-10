@@ -18,9 +18,14 @@ Figure showing number of individuals across treatments, at local and group scale
 ```{r}
 head(mobr_object)
 
-twoscale_output = get_mob_stats(mobr_object, group = "type/treatment name", ref_group = "reference type/treatment", n_perm = 1000)
-# note- some packages prevent movr package from working. Possibly dplyr. Will give message "Error in UseMethod("anova") : no applicable method for 'anova' applied to an object of class “list"". 
+# this is where my understanding of R stalls out- this component of the mobr package will not run unless you reinstall the packages below. Even with the data included in the package (inv_comm or tank_comm), it won't run unless you go back and install again (just loading is also not sufficient)
+# If you don't, R will give the error message "Error in UseMethod("anova") : no applicable method for 'anova' applied to an object of class “list"". 
+install.packages(c('bindrcpp','glue','pkgconfig','tibble','plyr','dplyr'))
+library(mobr)
 
+# analysis : get_mob_stats(mobr_object, group = "type/treatment name", ref_group = "reference type/treatment", n_perm = 1000)
+# ie:
+twoscale_output = get_mob_stats(mobr_object, group = "Plot", ref_group = "Matrix", n_perm = 100)
 
 plot(twoscale_output, multi_panel = TRUE)
 
