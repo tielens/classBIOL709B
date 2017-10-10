@@ -44,6 +44,8 @@ install_github('MoBiodiv/mobr')
 setwd("/Users/elsketielens/phd/chapters/kipuka connectivity/analyses/data files for R")
 data.specimens<-read.table("specimens2.csv", header=T, sep=",")
 specimens<-subset(data.specimens, subset=Year=="2010")
+library(reshape2)
+library(plyr)
 down <- melt(specimens,measure.vars="Abund")
 make <- dcast(down,formula= Kipuka_ID+Plot~Family+SpeciesCode, fun.aggregate=sum)
 
