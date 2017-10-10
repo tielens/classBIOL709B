@@ -1,0 +1,32 @@
+---
+title: 'Workflow 2: Exploring data'
+output: html_document
+---
+
+
+
+objective:
+to explore data by plotting and calculating basic diversity metrics
+to think through what you might expect/where you might see differences in the results
+
+input:
+mobr object (see step 1)
+
+output:
+
+
+
+```{}
+
+
+
+```
+
+
+
+
+
+
+
+
+

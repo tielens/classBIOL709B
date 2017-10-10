@@ -1,0 +1,123 @@
+---
+title: 'Workflow 1: Formatting data'
+output: html_document
+---
+
+
+objective:
+to prepare data in format that can be input. To create mobr object for further calculations
+
+input:
+original data.
+  species by site matrix of abundance or presence absence data
+  categories/types/treatments that you are interested in comparing
+  coordinates for spatial component
+
+output:
+mobr object 
+
+```{r}
+
+rm(list=ls())
+
+#install.packages('devtools')
+library(devtools)
+library(bindrcpp)
+library(dplyr)
+library(tibble)
+library(pkgconfig)
+library(glue)
+install.packages(c('bindrcpp','glue','pkgconfig','tibble','plyr','dplyr'))
+
+library(mobr)
+#or
+install_github('MoBiodiv/mobr')
+
+```
+
+
+
+
+```{r}
+setwd("/Users/elsketielens/phd/chapters/kipuka connectivity/analyses/data files for R")
+data.specimens<-read.table("specimens2.csv", header=T, sep=",")
+specimens<-subset(data.specimens, subset=Year=="2010")
+down <- melt(specimens,measure.vars="Abund")
+make <- dcast(down,formula= Kipuka_ID+Plot~Family+SpeciesCode, fun.aggregate=sum)
+
+library(reshape2)
+library(plyr)
+inv_comm<-make[,-c(1,2)]
+inv_plot_attr <- ddply(down, .( Plot, Centroid_X,Centroid_Y),summarize, Area_ha=mean(Area_ha))
+inv_plot_attr<-inv_plot_attr[,c(1:3)]
+
+# spatial coordinates must be named x y to guarantee that they will be recognized as coordinates by the function.
+colnames(inv_plot_attr)<-c("Plot", "x", "y")
+
+head(inv_comm)
+head(inv_plot_attr)
+```
+
+
+
+```{r}
+mobr_object <- make_mob_in(inv_comm, inv_plot_attr, latlong=TRUE)
+
+mobr_object
+```
+
+
+what's actually happening in this code?:
+```{r}
+
+# create a function, and define input in that function: input should be a species by site matrix, a matrix with plot attributes in the form of rows with sites and a column with treatment/category/type and two columns that contain spatial coordinates. You can specify whether these are lat long. 
+function (comm, plot_attr, binary = FALSE, latlong = FALSE) 
+{
+    out = list()
+    out$tests = list(N = T, SAD = T, agg = T)
+    if (nrow(comm) < 5) {
+        warning("Number of plots in community is less than five therefore only individual rarefaction will be computed")
+        out$tests$N = FALSE
+        out$tests$agg = FALSE
+    }
+    if (nrow(comm) != nrow(plot_attr)) 
+        stop("Number of plots in community does not equal number of plots in plot attribute table")
+    spat_cols = which(names(plot_attr) %in% c("x", "y"))
+    if (length(spat_cols) == 1 & latlong == TRUE) 
+        stop("Both latitude and longitude have to be specified")
+    if (any(row.names(comm) != row.names(plot_attr))) 
+        warning("Row names of community and plot attributes tables do not match")
+    if (binary) {
+        warning("Only spatially-explict sampled based forms of rarefaction can be computed on binary data")
+        out$tests$SAD = FALSE
+        out$tests$N = FALSE
+    }
+    else {
+        if (max(comm) == 1) 
+            warning("Maximum abundance is 1 which suggests data is binary, change the binary argument to TRUE")
+    }
+    if (any(colSums(comm) == 0)) {
+        warning("Some species have zero occurrences and will be dropped from the community table")
+        comm = comm[, colSums(comm) != 0]
+    }
+    out$comm = data.frame(comm)
+    if (length(spat_cols) > 0) {
+        out$env = data.frame(plot_attr[, -spat_cols])
+        colnames(out$env) = colnames(plot_attr)[-spat_cols]
+        out$spat = data.frame(plot_attr[, spat_cols])
+    }
+    else {
+        out$tests$agg = FALSE
+        out$env = data.frame(plot_attr)
+        out$spat = NULL
+    }
+    out$latlong = latlong
+    class(out) = "mob_in"
+    return(out)
+}
+<bytecode: 0x10df2b8d0>
+<environment: namespace:mobr>
+
+
+
+```
