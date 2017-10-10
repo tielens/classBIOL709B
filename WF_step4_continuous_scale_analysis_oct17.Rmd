@@ -1,0 +1,128 @@
+---
+title: 'Workflow 4: Expanding to continuous scale analysis'
+output: html_document
+---
+
+objective:
+to compare diversity components between categories/types/treatments across scales
+
+input:
+mobr object created from original data (step 1)
+
+output:
+Figures showing differences in species richness between levels of treatment, across spatial scales.
+Figures showing how much of the above difference in richness can be attributed to evenness, spatial aggregation and differences in numbers of individuals. Also showing to what extent the role of these different factors varies across scale.
+
+
+
+```{r}
+
+cont_output = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded', type='discrete', log_scale=TRUE, n_perm = 20)
+
+plot(cont_output, display = )
+```
+
+
+What's actually happening in the code:
+```{r}
+
+# create function, define input & defaults
+function (mob_in, group_var, env_var = NULL, ref_group = NULL, 
+    tests = c("SAD", "N", "agg"), type = "discrete", inds = NULL, 
+    log_scale = FALSE, min_plots = NULL, density_stat = "mean", 
+    corr = "spearman", n_perm = 1000, overall_p = FALSE) 
+
+# *what does 'get_delta_overall_checks' do?*  
+  {
+    approved_tests = get_delta_overall_checks(mob_in, type, group_var, 
+        env_var, density_stat, tests)
+ # define object S as containing the number of species across samples
+       S = ncol(mob_in$comm)
+ # plot_abd is an object that gives the abundance of individuals for every site in the community
+          plot_abd = rowSums(mob_in$comm)
+# 
+              group_data = mob_in$env[, group_var]
+    groups = as.character(group_data)
+    group_plots = data.frame(table(groups))
+    group_sad = aggregate(mob_in$comm, by = list(group_data), 
+        sum)
+    if (is.null(env_var)) {
+        env_raw = group_sad[, 1]
+        if ("factor" %in% class(env_raw)) {
+            env_levels = as.numeric(env_raw)
+        }
+        else {
+            env_levels = env_raw
+        }
+    }
+    else {
+        env_levels = tapply(mob_in$env[, env_var], list(group_data), 
+            mean)
+    }
+    group_levels = as.character(group_sad[, 1])
+    group_sad = group_sad[, -1]
+    ind_sample_size = get_delta_ind_sample(group_sad, inds, log_scale)
+    plot_dens = get_plot_dens(mob_in$comm, density_stat)
+    out = list()
+    out$type = type
+    out$tests = approved_tests
+    out$log_scale = log_scale
+    out$density_stat = list(density_stat = density_stat, plot_dens = plot_dens)
+    ind_rare = data.frame(apply(group_sad, 1, function(x) rarefaction(x, 
+        "indiv", ind_sample_size)))
+    out$indiv_rare = cbind(ind_sample_size, ind_rare)
+    names(out$indiv_rare) = c("sample", group_levels)
+    out$sample_rare = get_sample_curves(mob_in, group_levels, 
+        group_data, approved_tests)
+    if (type == "continuous") {
+        get_delta_continuous_checks(corr, group_levels, env_raw)
+        if ("SAD" %in% approved_tests) 
+            out = effect_SAD_continuous(out, group_sad, env_levels, 
+                corr, n_perm)
+        if ("N" %in% approved_tests) 
+            out = effect_N_continuous(out, mob_in, S, group_levels, 
+                env_levels, group_data, plot_dens, plot_abd, 
+                ind_sample_size, corr, n_perm)
+        if ("agg" %in% approved_tests) 
+            out$agg = effect_agg_continuous(mob_in, out$sample_rare, 
+                group_plots, group_levels, group_data, env_levels, 
+                corr, n_perm)
+    }
+    else if (type == "discrete") {
+        get_delta_discrete_checks(ref_group, group_levels, group_data, 
+            env_var)
+        if (overall_p) {
+            warning("Caution: Overall p-values depend on scales of measurement yet do not explicitly \\nreflect significance at any particular scale. Be careful in interpretation.")
+            out$overall_p = as.data.frame(matrix(NA, length(group_levels) - 
+                1, 1 + length(approved_tests)))
+            names(out$overall_p) = c("group", approved_tests)
+            out$overall_p$group = group_levels[group_levels != 
+                ref_group]
+        }
+        if ("SAD" %in% approved_tests) 
+            out = effect_SAD_discrete(out, group_sad, group_levels, 
+                ref_group, n_perm, overall_p)
+        if ("N" %in% approved_tests) 
+            out = effect_N_discrete(out, mob_in, group_levels, 
+                ref_group, groups, density_stat, ind_sample_size, 
+                n_perm, overall_p)
+        if ("agg" %in% approved_tests) 
+            out = effect_agg_discrete(out, mob_in, ref_group, 
+                group_plots, group_data, group_levels, n_perm, 
+                overall_p)
+    }
+    else stop("The argument \\"type\\" must be either \\"discrete\\" or \\"continuous\\"")
+    class(out) = "mob_out"
+    return(out)
+}
+<environment: namespace:mobr>
+
+
+
+```
+
+
+
+
+
+

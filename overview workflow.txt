@@ -1,0 +1,62 @@
+Outline of workflow for BIOL709b project
+
+
+Project objective: to understand the mobr package, troubleshoot, annotate and make the 
+underlying code accessible 
+My github for this class contains Rmd documents for each of the bubbles in my workflow. 
+Functions are further outlined there. This document is to give you an idea of the overall 
+workflow and different pieces. 
+
+
+
+Workflow bubble 1:
+
+- Prepare data in format that can be input. 
+- Create mobr object for further calculations
+
+main function:
+make_mob_in()
+
+
+
+Workflow bubble 2:
+- Explore data by plotting and calculating basic diversity metrics
+- Get an idea of what you might expect/where you might see differences in the results
+
+main function:
+plot()
+
+
+
+
+
+Workflow bubble 3:
+- Plot diversity components across scales.
+- Compare diversity components at local and group scales. 
+- Understand turnover between scales. 
+
+main function:
+get_mob_stats()
+
+
+
+
+
+
+Workflow bubble 4:
+- compare diversity components between categories/types/treatments across scales
+- Plot how much of the difference in species richness between categories can be attributed 
+to evenness, spatial aggregation and differences in numbers of individuals. Also showing 
+to what extent the role of these different factors varies across scale.
+
+main function:
+get_delta_stats
+
+
+
+
+
+Workflow bubble 5:
+- Interpret!
+(does not have an R script)
+
