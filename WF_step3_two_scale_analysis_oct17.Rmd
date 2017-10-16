@@ -147,6 +147,7 @@ function (mob_in, group_var, ref_group = NULL, index = c("N",
             n_rare = NA, value = beta_S_PIE)
         dat_samples <- rbind(dat_samples, dat_beta_S_PIE)
     }
+ # similarly: get_F_values is not a real function >!?
     F_obs <- get_F_values(dat_samples, permute = F)
     F_rand <- dplyr::bind_rows(replicate(n_perm, get_F_values(dat_samples, 
         permute = T), simplify = F)) %>% ungroup()
@@ -155,6 +156,7 @@ function (mob_in, group_var, ref_group = NULL, index = c("N",
     p_val_samples <- F_rand %>% group_by(index, n_rare) %>% summarise(p_val = sum(F_val_obs <= 
         F_val)/n_perm) %>% ungroup()
     if (!boot_groups) {
+  # function does not exist
         diff_obs <- get_group_diff(mob_in$comm, group_bin, index, 
             n_rare = n_rare_groups, permute = F)
         diff_rand <- bind_rows(replicate(n_perm, get_group_diff(mob_in$comm, 
@@ -173,6 +175,7 @@ function (mob_in, group_var, ref_group = NULL, index = c("N",
         boot_repl_groups <- bind_rows(boot_repl_groups)
         alpha <- 1 - conf_level
         p <- c(alpha/2, 0.5, 1 - alpha/2)
+
         dat_groups <- boot_repl_groups %>% group_by(group, index, 
             n_rare) %>% do(setNames(data.frame(t(quantile(.$value, 
             p, na.rm = T))), c("lower", "median", "upper")))
@@ -188,6 +191,7 @@ function (mob_in, group_var, ref_group = NULL, index = c("N",
     dat_samples$index <- factor(dat_samples$index)
     if (!boot_groups) {
         p_val_groups$index <- factor(p_val_groups$index, levels = index)
+  
         p_val_groups <- p_val_groups[order(p_val_groups$index), 
             ]
         out <- list(samples_stats = dat_samples, groups_stats = dat_groups, 
