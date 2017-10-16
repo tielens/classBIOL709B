@@ -51,44 +51,62 @@ function (mob_in, group_var, ref_group = NULL, index = c("N",
         stop("Set nperm to a value greater than 1")
   # create an object called indices containing the names  below 
    INDICES <- c("N", "S", "S_rare", "S_asymp", "PIE", "S_PIE")
-  #
+  # confirms that the indices in your input (at 'function()' ) correspond with the nexessary indices listed in the object above
     index <- match.arg(index, INDICES, several.ok = TRUE)
   # creates object group_id which contains the mobr_object environmental variable for the column that you specified as grouping variable. Turns this into a factor
       group_id = factor(mob_in$env[, group_var])
-  #
+  # if the ref_group is null (or has not been specified), assign the first object in the group_id column to be ref_group
         if (is.null(ref_group)) 
         ref_group = levels(group_id)[1]
+      # if whatever is assigned to be the ref_group is not a level in the variable group_id, stop the code and give error message
     if (!ref_group %in% levels(group_id)) 
         stop("ref_group has to be one level in group_var!")
+      # reorder the levels of the factor group_id so that ref_group is moved to the top
     group_id = relevel(group_id, ref_group)
+    # create a vector of the word 'control' which is saved as a vector, and repeat this for the length of group_id. save this as group_bin
     group_bin = factor(rep("control", times = length(group_id)), 
         levels = c("control", "treatment"))
+    # all levels of group_id that are not the reference group are assigned the factor 'treatment' in the object group_bin
     group_bin[group_id != ref_group] <- "treatment"
+   # print the output of the above match.arg comparison
     print(index)
+    # make an object called samples_N that contains the sum across rows of mob_in$comm- which should be the sum of all individuals
     samples_N = rowSums(mob_in$comm)
+    # make an object called samples_per_group that contains the number of samples existing in every level of group_id
     samples_per_group <- table(group_id)
+    # The code below says to create the objects N_min_sample and n_rare_sample if either the number of rare samples contains NULL, or if it is not numeric. The objects N_min_sample contains the lowest value in samples_N; ie the smallest value of all the sums across rows. n_rare_samples is an object that contains whatever value was saved in N_min_sample. n_rare_samples defaults to NULL; so unless otherwise specified by the user n_rare_samples will be the smallest site abundance. 
     if (any(is.null(n_rare_samples)) | !is.numeric(n_rare_samples)) {
         N_min_sample = min(samples_N)
         n_rare_samples = N_min_sample
     }
+    # The code above stated to create the objects N_min_sample and n_rare_sample if either the number of rare samples contains NULL, or if it is not numeric. If neither of those are true, save n_rare_samples as the closest integer with a value smaller than the input value for n_rare_samples. Ie if input is 4.2, this will save '4' in the n_rare_samples object
     else {
         n_rare_samples <- floor(n_rare_samples)
     }
+    # if the number of rare samples is lower than the n_rare_min (on default set to 5), return an error message indicating that the number of values for rarefaction is low and that instead n_rare_min will be used.
     if (any(n_rare_samples < n_rare_min)) {
         warning(paste("The number of individuals for rarefaction analysis is too low and is set to the minimum of", 
             n_rare_min, "individuals."))
+    # replace the values in n_rare_samples that are lower than n_rare_min by the value in n_rare_min
         n_rare_samples[n_rare_samples < n_rare_min] <- n_rare_min
+    # save every unique value in n_rare_samples only once in the vector n_rare_samples
         n_rare_samples <- unique(n_rare_samples)
+        # print the text "Number of individuals for rarefaction:" followed by ever unique value in n_rare_samples
         print(paste("Number of individuals for rarefaction:", 
             paste(n_rare_samples, collapse = ", ")))
     }
+    # create an object n_rare_groups that multiplies n_rare_samples by the number of samples existing in every level of group_id 
     n_rare_groups <- n_rare_samples * min(samples_per_group)
+    # use the aggregate() function to take the sum of the number of individuals in the community (mob_in$comm) per group_id. save as abund_group
     abund_group = aggregate(mob_in$comm, by = list(group_id), 
         FUN = "sum")
+    # presumably calculates biodiversity- the function calc_biodiv() does not exist in the R library. online search only shows up that exact phrase in the mobr package github account. I can't find it in previously defined functions (make_mob_in())
     dat_groups <- calc_biodiv(abund_mat = abund_group[, -1], 
         groups = abund_group[, 1], index = index, n_rare = n_rare_groups)
+    # estimating what this function might do- it creates an abundance matrix containing either the abundances summed per group or per sample, and the levels in group_id, and specifies a index of interest (ie S, S_rare, S_PIE, S_asymp)
     dat_samples <- calc_biodiv(abund_mat = mob_in$comm, groups = group_id, 
         index = index, n_rare = n_rare_samples)
+    # if your index of interest is S, give a list of values for gamma, alpha, beta_S. The gamma diversity is the value for S in dat_groups (ie at the group level), for every level/group_id. Alpha diversity is the value for S at the sample level, in dat_samples. beta_S is the value of gamma for group_id, divided by alpha
     if (any(index == "S")) {
         gamma <- with(dat_groups, value[index == "S"])
         alpha <- with(dat_samples, value[index == "S"])
