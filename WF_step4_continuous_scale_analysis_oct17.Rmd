@@ -17,7 +17,7 @@ Figures showing how much of the above difference in richness can be attributed t
 
 ```{r}
 
-cont_output = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded', type='discrete', log_scale=TRUE, n_perm = 20)
+cont_output = get_delta_stats(mobr_object, 'Plot', ref_group='Matrix', type='discrete', log_scale=TRUE, n_perm = 20)
 
 plot(cont_output, display = )
 ```

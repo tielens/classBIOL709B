@@ -25,6 +25,7 @@ library(mobr)
 
 # analysis : get_mob_stats(mobr_object, group = "type/treatment name", ref_group = "reference type/treatment", n_perm = 1000)
 # ie:
+detach(package:plyr)
 twoscale_output = get_mob_stats(mobr_object, group = "Plot", ref_group = "Matrix", n_perm = 100)
 
 plot(twoscale_output, multi_panel = TRUE)
@@ -35,6 +36,8 @@ plot(twoscale_output, multi_panel = TRUE)
 
 Now let's examine what's actually happening in this code:
 ```{r}
+# First detach plyr- plyr and dplyr both use the function 'mutate()', and so when plyr is last loaded the dplyr:mutate() used in get_mob_stats() will call the wrong mutate function and will give an error. 
+detach(package:plyr)
 
 # create function. the first section is defining input and default settings. 
 
@@ -213,6 +216,72 @@ function (mob_in, group_var, ref_group = NULL, index = c("N",
 ```
 
 
+Code for the error in the two scale analysis function.
+Result of mutate() doing different things in plyr and dplyr
+prob 'shielding' the plyr package helps. 
 
+"Attaching package: ‘plyr’
+
+The following objects are masked from ‘package:dplyr’:
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise, summarize"
+
+```{r}
+# Significance tests
+   
+   # sample level
+   F_obs <- get_F_values(dat_samples, permute = F)
+   F_rand <- dplyr::bind_rows(replicate(n_perm, get_F_values(dat_samples, permute = T), simplify = F)) %>% ungroup()
+   F_obs <- F_obs %>% mutate(F_val_obs = F_val,
+                             F_val = NULL)
+   F_rand <- left_join(F_rand, F_obs)
+   
+   p_val_samples <- F_rand %>% 
+      group_by(index, n_rare) %>%
+      summarise(p_val = sum(F_val_obs <= F_val)/n_perm) %>%
+      ungroup()
+   
+   # group level
+   if (!boot_groups){
+      diff_obs <- get_group_diff(mob_in$comm, group_bin, index, n_rare = n_rare_groups,                                                                 permute = F)
+      diff_rand <- bind_rows(replicate(n_perm, get_group_diff(mob_in$comm, group_bin,
+                                                              index,
+                                                              n_rare = n_rare_groups,
+                                                              permute = T),
+                                       simplify = F))
+      diff_obs <- diff_obs %>% mutate(d_obs = delta,
+                                      delta = NULL)
+      diff_rand <- left_join(diff_rand, diff_obs)
+      
+      p_val_groups <- diff_rand %>% 
+         group_by(index, n_rare) %>%
+         summarise(p_val = get_pval(rand = delta, obs = first(d_obs),
+                                    n_samples = n_perm)) %>% ungroup()
+   } else {
+      # bootstrap sampling within groups
+      
+      abund_dat <- cbind(group_id, mob_in$comm)
+      
+      boot_repl_groups <- replicate(n_perm,
+                                    boot_sample_groups(abund_dat,
+                                                       index = index,
+                                                       n_rare = n_rare_groups),
+                                    simplify = F)
+      boot_repl_groups <- bind_rows(boot_repl_groups)
+      
+      alpha <- 1 - conf_level
+      p <- c(alpha/2, 0.5, 1 - alpha/2)
+     
+      dat_groups <- boot_repl_groups %>% 
+         group_by(group, index, n_rare) %>%
+         do(setNames(data.frame(t(quantile(.$value, p, na.rm = T))),
+                     c("lower","median","upper")))
+}
+
+
+
+
+
+```
 
 
