@@ -1,0 +1,107 @@
+---
+title: "Full R Markdown"
+output: html_document
+---
+
+
+
+## R Markdown of Progress for Oct 2017  
+
+#### Preparing packages & data  
+
+Loading packages  
+
+```{r, echo=FALSE}
+
+rm(list=ls())
+
+#install.packages('devtools')
+library(devtools)
+library(bindrcpp)
+library(plyr)
+library(dplyr)
+library(reshape2)
+library(tibble)
+library(pkgconfig)
+library(glue)
+install.packages(c('bindrcpp','glue','pkgconfig','tibble','plyr','dplyr'), repos = "http://cran.us.r-project.org")
+
+library(mobr)
+#or
+install_github('MoBiodiv/mobr')
+
+```
+
+
+Load and create datasets  
+
+```{r}
+setwd("/Users/elsketielens/phd/chapters/kipuka connectivity/analyses/data files for R")
+data.specimens<-read.table("specimens2.csv", header=T, sep=",")
+specimens<-subset(data.specimens, subset=Year=="2010")
+library(reshape2)
+library(plyr)
+down <- melt(specimens,measure.vars="Abund")
+make <- dcast(down,formula= Kipuka_ID+Plot~Family+SpeciesCode, fun.aggregate=sum)
+
+my_comm<-make[,-c(1,2)]
+my_plot_attr <- ddply(down, .( Plot, Centroid_X,Centroid_Y),summarize, Area_ha=mean(Area_ha))
+my_plot_attr<-my_plot_attr[,c(1:3)]
+
+# spatial coordinates must be named x y to guarantee that they will be recognized as coordinates by the function.
+colnames(my_plot_attr)<-c("Plot", "x", "y")
+
+head(my_comm)
+head(my_plot_attr)
+
+```
+
+
+#### Creating mobr object
+
+```{r}
+mobr_object <- make_mob_in(my_comm, my_plot_attr, latlong=TRUE)
+
+mobr_object
+```
+
+
+#### Explore data visually
+
+```{r}
+
+library(vegan)
+
+plot(rowSums(my_comm)~my_plot_attr$Plot)
+plot(specnumber(my_comm)~my_plot_attr$Plot)
+plot(rarefy((my_comm), 16)~my_plot_attr$Plot)
+
+rarecurve(my_comm, step = 20,  col = my_plot_attr$Plot, cex = 0.6)
+
+
+plot_rarefaction(mobr_object, 'Plot', 'Matrix', 'indiv', lwd=4)
+
+par(mfrow=c(1,3))
+hist(colSums(subset(my_comm, subset=my_plot_attr$Plot=="Matrix")), main="Matrix", xlab="abundance" )
+hist(colSums(subset(my_comm, subset=my_plot_attr$Plot=="Center")), main="Center", xlab="abundance" )
+hist(colSums(subset(my_comm, subset=my_plot_attr$Plot=="Edge")), main="Edge", xlab="abundance" )
+
+
+```
+
+```{r}
+
+install.packages(c('bindrcpp','glue','pkgconfig','tibble','plyr','dplyr'), repos = "http://cran.us.r-project.org")
+library(mobr)
+
+# analysis : get_mob_stats(mobr_object, group = "type/treatment name", ref_group = "reference type/treatment", n_perm = 1000)
+# ie:
+detach(package:plyr)
+twoscale_output = get_mob_stats(mobr_object, group = "Plot", ref_group = "Matrix", n_perm = 100)
+
+plot(twoscale_output, multi_panel = TRUE)
+
+
+
+```
+
