@@ -1,0 +1,74 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup}
+
+##########################################################################################
+
+# Objective: to calculate species turnover between samples taken from the forest kipuka and from the matrix between kipuka. Also looking at difference between samples from the center and edge of the kipuka. 
+
+
+# loading data and packages
+library(plyr)
+library(reshape2)
+library(picante)
+
+setwd("/Users/elsketielens/phd/chapters/kipuka connectivity/analyses/data files for R")
+
+data.specimens<-read.table("specimens2.csv", header=T, sep=",")
+specimens<-subset(data.specimens, subset=Year=="2010")
+down <- melt(specimens,measure.vars="Abund")
+make <- dcast(down,formula= Kipuka_ID+Plot~Family+SpeciesCode, fun.aggregate=sum)
+
+# species by site matrix is named 'spec', identifiers for the data is named 'locvar'
+locvar<-make[,c(1,2)]
+spec<-make[,-c(1,2)]
+
+
+
+### Compare observed beta to null model
+
+
+#pick out beta of two communities
+obs_kip_mat = as.matrix(species.dist(spec, metric="jaccard"))[1,3]
+obs_center_edge = as.matrix(species.dist(spec, metric="jaccard"))[1,2]
+
+
+null.values_km = replicate(999,as.matrix(species.dist(randomizeMatrix(as.matrix(spec), null.model="independentswap"),metric="jaccard"))[1,3])
+
+null.values_ce = replicate(999,as.matrix(species.dist(randomizeMatrix(as.matrix(spec), null.model="independentswap"),metric="jaccard"))[1,2])
+
+
+
+
+# give me of the rank values just where [1]; ie my obs, lies tov the others
+rank(c(obs_kip_mat, null.values_km))[1]
+rank(c(obs_kip_mat, null.values_km),ties.method="last")[1]
+unique(null.values_km)
+
+rank(c(obs_kip_mat, null.values_km))[1]/1000
+hist(null.values_km)
+abline(v=obs_kip_mat)
+
+
+
+rank(c(obs_center_edge, null.values_ce))[1]
+rank(c(obs_center_edge, null.values_ce),ties.method="last")[1]
+unique(null.values_ce)
+
+
+# conclusion: turnover in kipuka and matrix species communities differs from null expectation. Although there are only seven possible values, enough null communities fall to the right on the distribution for the community to be sig different.
+
+# However, for center and edge trees this is not the case. I also would not expect that- other analyses don't indicate much of an edge effect. However, when looking at the number of unique values for dissimilarity in the null model, I typically only get two. However, if you look at the two communities, they are pretty different and have a lot of variation. I don't understand why there are only two possible dissimilarity values for the null models. There are 99 species, 42 sites and many species differ in abundance by 2-5 specimens. Shouldn't that result in many possible combinations?
+
+spec[c(1,2),]
+
+
+## Incidentally, I was trying to find the 95% CI to mark on my histogram- which is the value where 95% of the data is to the right on the histogram/is greater than that value. So I tried ordering the null values, so I could extract the 950th or 975th value (two tailed). But ordering the data doesn't seem to result in the values ascending. 
+order(null.values_km)
+abline(v=order(null.values_km)[995], col="red")
+
+
+```
